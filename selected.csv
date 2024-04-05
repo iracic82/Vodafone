@@ -1,0 +1,4 @@
+"CustomerID","Address","Email","MembershipLevel","Name"
+"CUST1003","""789 Pine Street, Gotham""","alexj@example.com","Bronze","Alex Johnson"
+"CUST1001","""123 Elm Street, Springfield""","johndoe@example.com","Gold","Joe Doe"
+"CUST1002","""456 Oak Street, Metropolis""","janesmith@example.com","Silver","Jane Smith"
