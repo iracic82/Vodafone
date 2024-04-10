@@ -28,6 +28,11 @@ variable prosimo_token {
   description = "valid prosimo token - from MSP Portal"
 }
 
+#variable network_policy {
+#  type = string
+ # description = "valid prosimo token - from MSP Portal"
+#}
+
 
 variable prosimo_teamName {
   type = string
@@ -54,7 +59,7 @@ variable tenantazure {
   description = "azure tenant id"
 }
 
-/*
+
 variable Access_Key_AWS {
   type = string
   description = "valid AWS Key"
@@ -64,7 +69,7 @@ variable Access_Secret_AWS {
   type = string
   description = "valid AWS Secret"
 }
-*/
+
 variable cloud_type {
   type = string
 
@@ -89,6 +94,7 @@ variable "EU_West_FrontEnd" {
     aws_vpc_name                = string
     igw_name                    = string
     rt_name                     = string
+    namespace                   = string
     aws_subnet_name             = string
     private_ip                  = string
     aws_ec2_name                = string
@@ -115,3 +121,4 @@ variable "North_EU_AppSvcs_VNets" {
 
   }))
 }
+

@@ -63,3 +63,18 @@ variable "rt_name" {
   description = "Name of RT"
   default = ""
 }
+
+variable "EU_West_FrontEnd" {
+  type = map(object({
+    aws_vpc_name                = string
+    igw_name                    = string
+    rt_name                     = string
+    namespace                   = string
+    aws_subnet_name             = string
+    private_ip                  = string
+    aws_ec2_name                = string
+    aws_ec2_key_pair_name       = string
+    aws_vpc_cidr                = string
+    aws_subnet_cidr             = string
+  }))
+}

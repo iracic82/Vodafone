@@ -3,7 +3,7 @@ terraform {
   required_providers {
     prosimo = {
       source  = "prosimo-io/prosimo"
-      version = "3.1.2"
+      version = "4.1.0"
     }
   }
 }

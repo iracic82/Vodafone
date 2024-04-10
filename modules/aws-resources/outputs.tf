@@ -16,10 +16,17 @@ output "ssh_access" {
 }
 
 
-# Within your module
+#Within your module
 output "aws_vpc_id" {
   value = aws_vpc.vpc1.id
 }
+
+
+#output "vpc_ids" {
+#  value = {for k, v in var.EU_West_FrontEnd : k => aws_vpc.vpc1[k].id}
+#  description = "Map of VPC names to their IDs"
+#}
+
 
 output "subnet_ids" {
   value = [aws_subnet.subnet1.id] # Assuming a single subnet; adjust as needed

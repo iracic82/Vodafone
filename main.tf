@@ -9,6 +9,7 @@ module "aws__instances_eu" {
   providers         = {   
   aws = aws.eu-west-2
   }
+  EU_West_FrontEnd = var.EU_West_FrontEnd
   for_each              = var.EU_West_FrontEnd
   aws_region            = var.aws_region[0]
   aws_vpc_name          = each.value["aws_vpc_name"]
@@ -27,7 +28,7 @@ module "aws__instances_eu" {
 
 resource "aws_security_group" "http_https_sg" {
   provider      = aws.eu-aws
-  vpc_id            = module.aws__instances_eu["VPC1"].aws_vpc_id
+  vpc_id            = module.aws__instances_eu.vpc_ids["VPC1"]
   name        = "http-https-sg"
   description = "Allow HTTP and HTTPS traffic"
 
@@ -98,7 +99,7 @@ module "azure_instances_eu" {
   azure_subnet_cidr    = each.value["azure_subnet_cidr"]
   azure_vnet_cidr      = each.value["azure_vnet_cidr"]
 }
-/*
+*/
 # Onboard CSP Account into Prosimo Dashboard
 
 resource "prosimo_cloud_creds" "aws" {
@@ -114,7 +115,7 @@ resource "prosimo_cloud_creds" "aws" {
     }
   }
 }
-
+/*
 resource "prosimo_cloud_creds" "azure" {
   cloud_type = "AZURE"
   nickname   = "Prosimo_Azure"
@@ -126,7 +127,7 @@ resource "prosimo_cloud_creds" "azure" {
     secret_id       = var.clientsecret
   }
 }
-
+*/
 # Create Prosimo Infra resources in AWS
 
 module "prosimo_resource_aws_eu" {
@@ -142,7 +143,7 @@ module "prosimo_resource_aws_eu" {
 
 }
 
-
+/*
 module "prosimo_resource_aws_us" {
   source     = "./modules/prosimo-resources"
   prosimo_teamName = var.prosimo_teamName
@@ -186,7 +187,7 @@ module "prosimo_resource_azure" {
   wait = "false"
   
 }
-
+*/
 resource "aws_ec2_transit_gateway" "dev" {
 provider = aws.eu-aws
 description = "EU-TGW"
@@ -195,30 +196,171 @@ tags = {
   }
 }
 
-/*
-# Onboard Networks to Prosimo Fabric
 
-module "network_eu" {
+/*
+resource "prosimo_visual_transit" "eu_west_2" {
+
+
+  transit_input {
+    cloud_type   = "AWS"
+    cloud_region = var.aws_region[0]
+    transit_deployment {
+      tgws {
+        name = aws_ec2_transit_gateway.dev.description
+        action = "MOD"
+        connection {
+          type = "EDGE"
+          action = "ADD"
+        }
+        connection {
+          type = "VPC"
+          action = "ADD"
+          name = "WebProd1Eu"
+        }
+        connection {
+          type = "VPC"
+          action = "ADD"
+          name = "WebProd2Eu"
+        }
+        connection {
+          type = "VPC"
+          action = "ADD"
+          name = "WebProd3Eu"
+        }
+      }
+    }
+  }
+  deploy_transit_setup = true
+  depends_on = [aws_ec2_transit_gateway.dev]
+}
+*/
+
+resource "prosimo_visual_transit" "eu_west" {
+  transit_input {
+    cloud_type   = "AWS"
+    cloud_region = var.aws_region[0]
+
+    transit_deployment {
+      tgws {
+        name   = aws_ec2_transit_gateway.dev.description
+        action = "MOD"
+
+        connection {
+          type   = "EDGE"
+          action = "ADD"
+        }
+
+        dynamic "connection" {
+          for_each = var.EU_West_FrontEnd
+
+          content {
+            type   = "VPC"
+            action = "ADD"
+            name   = connection.value.aws_vpc_name
+          }
+        }
+      }
+    }
+  }
+
+  deploy_transit_setup = true
+  depends_on = [aws_ec2_transit_gateway.dev]
+}
+# Create Namespaces and Export Policy
+
+module "namespace" {
+  source = "./modules/prosimo-namespaces"
+  namespace_tag = "Vodafone_Dev"
+}
+
+locals {
+  all_vpc_ids = { for k, v in module.aws__instances_eu : k => v.aws_vpc_id }
+}
+
+# Onboard Networks to Prosimo Fabric in AWS eu-west-2
+
+
+module "network_eu_vpc1" {
   source = "./modules/prosimo-network"
-  prosimo_teamName = var.prosimo_teamName
-  prosimo_token = var.prosimo_token
-  name         = "WEB_Subnet_EU"
-  region       = var.aws_region[0]
-  subnets      = var.subnet_cidr[0]
-  connectivity_type  = "vpc-peering"
-  placement    = "Workload VPC"
-  cloud        = "AWS"
-  cloud_type   = "public"
-  connectType  = "private"
-  vpc          = module.aws__instances_eu.aws_vpc_id
-  cloudNickname= "Prosimo"
-  decommission = "false"
-  onboard      = "true"
-  depends_on   = [ module.prosimo_resource ] 
+  prosimo_teamName    = var.prosimo_teamName
+  prosimo_token       = var.prosimo_token
+  network_name        = var.EU_West_FrontEnd["VPC1"]["aws_vpc_name"]
+  network_namespace   = var.EU_West_FrontEnd["VPC1"]["namespace"]
+  region              = var.aws_region[0]
+  subnets_config = [
+    {
+      subnet         = var.EU_West_FrontEnd["VPC1"]["aws_vpc_cidr"]
+    }
+  ]
+  connectivity_type   = "transit-gateway"
+  placement           = "Infra VPC"
+  cloud               = "AWS"
+  cloud_type          = "public"
+  connectType         = "private"
+  vpc                 = module.aws__instances_eu["VPC1"].aws_vpc_id
+  tgw_id              = aws_ec2_transit_gateway.dev.id
+  cloudNickname       = "Prosimo_AWS"
+  decommission        = "false"
+  onboard             = "true"
+}
+
+
+module "network_eu_vpc2" {
+  source = "./modules/prosimo-network"
+  prosimo_teamName    = var.prosimo_teamName
+  prosimo_token       = var.prosimo_token
+  network_name        = var.EU_West_FrontEnd["VPC2"]["aws_vpc_name"]
+  network_namespace   = var.EU_West_FrontEnd["VPC2"]["namespace"]
+  region              = var.aws_region[0]
+  subnets_config = [
+    {
+      subnet         = var.EU_West_FrontEnd["VPC2"]["aws_vpc_cidr"]
+    }
+  ]
+  connectivity_type   = "transit-gateway"
+  placement           = "Infra VPC"
+  cloud               = "AWS"
+  cloud_type          = "public"
+  connectType         = "private"
+  vpc                 = module.aws__instances_eu["VPC2"].aws_vpc_id
+  tgw_id              = aws_ec2_transit_gateway.dev.id
+  cloudNickname       = "Prosimo_AWS"
+  decommission        = "false"
+  onboard             = "true"
+}
+
+
+module "network_eu_vpc3" {
+  source = "./modules/prosimo-network"
+  prosimo_teamName    = var.prosimo_teamName
+  prosimo_token       = var.prosimo_token
+  network_name        = var.EU_West_FrontEnd["VPC3"]["aws_vpc_name"]
+  network_namespace   = var.EU_West_FrontEnd["VPC3"]["namespace"]
+  region              = var.aws_region[0]
+  subnets_config = [
+    {
+      subnet         = var.EU_West_FrontEnd["VPC3"]["aws_vpc_cidr"]
+      virtual_subnet = "10.168.0.0/20"  # Example virtual subnet
+    }
+  ]
+  connectivity_type   = "transit-gateway"
+  placement           = "Infra VPC"
+  cloud               = "AWS"
+  cloud_type          = "public"
+  connectType         = "private"
+  vpc                 = module.aws__instances_eu["VPC3"].aws_vpc_id
+  tgw_id              = aws_ec2_transit_gateway.dev.id
+  cloudNickname       = "Prosimo_AWS"
+  decommission        = "false"
+  onboard             = "true"
 }
 
 
 
+
+
+
+/*
 resource "aws_ec2_transit_gateway" "dev" {
 provider = aws.eu-aws
 description = "DEV"
@@ -228,7 +370,7 @@ tags = {
 }
 
 
-
+/*
 # Create Virtual Instance and Networking Infrastructre in Azure
 module "azure_instances_1" {
   source = "./modules/azure-resources"
